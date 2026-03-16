@@ -3,6 +3,12 @@ import { createClaudeCodeAgent } from "../src/agent.js";
 import type { AgentSideConnection } from "@agentclientprotocol/sdk";
 import type { StreamEvent } from "../src/claude-runner.js";
 
+vi.mock("../src/validation.js", () => ({
+  validateCwd: vi.fn((cwd: string) => cwd),
+  validateMcpCommand: vi.fn(),
+  validateMcpArgs: vi.fn(),
+}));
+
 // Mock that simulates tool_use events in streaming
 vi.mock("../src/claude-runner.js", () => {
   const MockClaudeRunner = vi.fn().mockImplementation(function (this: any) {

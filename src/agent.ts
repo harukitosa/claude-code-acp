@@ -16,6 +16,11 @@ import {
 import { SessionStore } from "./session-store.js";
 import { ClaudeRunner, type StreamEvent } from "./claude-runner.js";
 import { logger } from "./logger.js";
+import {
+  validateCwd,
+  validateMcpCommand,
+  validateMcpArgs,
+} from "./validation.js";
 
 function generateSessionId(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -61,22 +66,44 @@ export function createClaudeCodeAgent(
     async newSession(
       params: NewSessionRequest
     ): Promise<NewSessionResponse> {
+      // Validate cwd
+      let resolvedCwd: string;
+      try {
+        resolvedCwd = validateCwd(params.cwd);
+      } catch (err) {
+        throw RequestError.invalidParams(
+          `Invalid cwd: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+
       const sessionId = generateSessionId();
-      // Convert ACP MCP server format to our internal format
+      // Convert and validate ACP MCP server format
       const mcpServers = (params.mcpServers ?? [])
         .filter((s: any) => s.transport?.type === "stdio")
-        .map((s: any) => ({
-          name: s.name ?? s.id ?? "unknown",
-          transport: {
-            type: "stdio" as const,
-            command: s.transport.command,
-            args: s.transport.args,
-            env: s.transport.env,
-          },
-        }));
-      store.create(sessionId, params.cwd, mcpServers);
+        .map((s: any) => {
+          const command = s.transport.command;
+          const args = s.transport.args ?? [];
+          try {
+            validateMcpCommand(command);
+            validateMcpArgs(args);
+          } catch (err) {
+            throw RequestError.invalidParams(
+              `Invalid MCP server config: ${err instanceof Error ? err.message : String(err)}`
+            );
+          }
+          return {
+            name: s.name ?? s.id ?? "unknown",
+            transport: {
+              type: "stdio" as const,
+              command,
+              args,
+              env: s.transport.env,
+            },
+          };
+        });
+      store.create(sessionId, resolvedCwd, mcpServers);
       logger.info(
-        `Session created: ${sessionId} (cwd: ${params.cwd}, mcpServers: ${mcpServers.length})`
+        `Session created: ${sessionId} (cwd: ${resolvedCwd}, mcpServers: ${mcpServers.length})`
       );
       return { sessionId };
     },
@@ -112,8 +139,9 @@ export function createClaudeCodeAgent(
       const cwd = store.getCwd(sessionId)!;
       let toolCallCounter = 0;
 
-      logger.info(
-        `Prompt for session ${sessionId}: ${text.slice(0, 100)}${text.length > 100 ? "..." : ""}`
+      logger.info(`Prompt for session ${sessionId}: ${text.length} chars`);
+      logger.debug(
+        `Prompt content: ${text.slice(0, 100)}${text.length > 100 ? "..." : ""}`
       );
 
       const onEvent = (event: StreamEvent) => {

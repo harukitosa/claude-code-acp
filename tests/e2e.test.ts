@@ -9,6 +9,12 @@ import {
 } from "@agentclientprotocol/sdk";
 import { createClaudeCodeAgent } from "../src/agent.js";
 
+vi.mock("../src/validation.js", () => ({
+  validateCwd: vi.fn((cwd: string) => cwd),
+  validateMcpCommand: vi.fn(),
+  validateMcpArgs: vi.fn(),
+}));
+
 // Mock child_process to prevent actual claude CLI calls
 vi.mock("node:child_process", () => {
   const { EventEmitter } = require("node:events");

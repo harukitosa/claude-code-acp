@@ -28,6 +28,25 @@ export interface StreamEvent {
   sessionId?: string;
 }
 
+const SENSITIVE_FLAGS = new Set(["-p", "--print"]);
+const REDACT_FLAGS = new Set(["--resume"]);
+
+export function maskArgs(args: string[]): string {
+  const masked: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (SENSITIVE_FLAGS.has(args[i]) && i + 1 < args.length) {
+      masked.push(args[i], `<prompt: ${args[i + 1].length} chars>`);
+      i++;
+    } else if (REDACT_FLAGS.has(args[i]) && i + 1 < args.length) {
+      masked.push(args[i], "<session-id>");
+      i++;
+    } else {
+      masked.push(args[i]);
+    }
+  }
+  return masked.join(" ");
+}
+
 export class ClaudeRunner {
   private runningProcesses = new Map<string, ChildProcess>();
   private tempDirs: string[] = [];
@@ -178,6 +197,13 @@ export class ClaudeRunner {
     this.tempDirs = [];
   }
 
+  private sanitizeEnv(): NodeJS.ProcessEnv {
+    const env = { ...process.env };
+    delete env.ANTHROPIC_API_KEY;
+    delete env.ANTHROPIC_AUTH_TOKEN;
+    return env;
+  }
+
   cancel(trackingId: string): void {
     const proc = this.runningProcesses.get(trackingId);
     if (proc) {
@@ -191,10 +217,10 @@ export class ClaudeRunner {
     cwd?: string
   ): Promise<ClaudeResult> {
     return new Promise((resolve, reject) => {
-      logger.debug(`spawn: claude ${args.join(" ")}`);
+      logger.debug(`spawn: claude ${maskArgs(args)}`);
       const proc = spawn("claude", args, {
         cwd,
-        env: { ...process.env, ANTHROPIC_API_KEY: undefined },
+        env: this.sanitizeEnv(),
         stdio: ["pipe", "pipe", "pipe"],
       });
 
@@ -239,10 +265,10 @@ export class ClaudeRunner {
     trackingId?: string
   ): Promise<ClaudeResult> {
     return new Promise((resolve, reject) => {
-      logger.debug(`spawn streaming: claude ${args.join(" ")}`);
+      logger.debug(`spawn streaming: claude ${maskArgs(args)}`);
       const proc = spawn("claude", args, {
         cwd,
-        env: { ...process.env, ANTHROPIC_API_KEY: undefined },
+        env: this.sanitizeEnv(),
         stdio: ["pipe", "pipe", "pipe"],
       });
 

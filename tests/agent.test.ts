@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createClaudeCodeAgent } from "../src/agent.js";
 import type { AgentSideConnection } from "@agentclientprotocol/sdk";
 
+// Mock validation - agent unit tests should not hit filesystem
+vi.mock("../src/validation.js", () => ({
+  validateCwd: vi.fn((cwd: string) => cwd),
+  validateMcpCommand: vi.fn(),
+  validateMcpArgs: vi.fn(),
+}));
+
 // Mock ClaudeRunner
 vi.mock("../src/claude-runner.js", () => {
   const MockClaudeRunner = vi.fn().mockImplementation(function (this: any) {
