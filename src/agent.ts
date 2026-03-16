@@ -200,16 +200,6 @@ export function createClaudeCodeAgent(
           store.setClaudeSessionId(sessionId, result.sessionId);
         }
 
-        if (result.text) {
-          await connection.sessionUpdate({
-            sessionId,
-            update: {
-              sessionUpdate: "agent_message_chunk",
-              content: { type: "text", text: result.text },
-            },
-          });
-        }
-
         logger.info(`Prompt completed for session ${sessionId}`);
         return { stopReason: "end_turn" };
       } catch (err) {
