@@ -1,0 +1,39 @@
+{
+  "name": "claude-code-acp",
+  "version": "0.1.0",
+  "description": "ACP bridge for Claude Code CLI - use your Pro/Max subscription via ACP",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "claude-code-acp": "./bin/claude-code-acp.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "acp",
+    "claude",
+    "agent-client-protocol"
+  ],
+  "author": "Haruki Tosa <13haruki28@gmail.com>",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^0.16.1"
+  }
+}
