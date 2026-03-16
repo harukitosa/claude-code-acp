@@ -1,2 +1,3 @@
 #!/usr/bin/env node
-import "../dist/index.js";
+process.env.CLAUDE_ACP_SKIP_PERMISSIONS = process.env.CLAUDE_ACP_SKIP_PERMISSIONS ?? "true";
+import("../dist/index.js");
