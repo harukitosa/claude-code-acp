@@ -108,6 +108,7 @@ export class ClaudeRunner {
       prompt,
       "--output-format",
       "stream-json",
+      "--verbose",
       ...this.buildExtraArgs(),
     ];
     return this.runStreaming(args, cwd, onEvent, trackingId);
@@ -126,6 +127,7 @@ export class ClaudeRunner {
       claudeSessionId,
       "--output-format",
       "stream-json",
+      "--verbose",
       ...this.buildExtraArgs(),
     ];
     return this.runStreaming(args, undefined, onEvent, trackingId);
@@ -145,6 +147,7 @@ export class ClaudeRunner {
         prompt,
         "--output-format",
         "stream-json",
+        "--verbose",
         ...this.buildExtraArgs(),
         ...mcpArgs,
       ];
@@ -221,7 +224,7 @@ export class ClaudeRunner {
       const proc = spawn("claude", args, {
         cwd,
         env: this.sanitizeEnv(),
-        stdio: ["pipe", "pipe", "pipe"],
+        stdio: ["ignore", "pipe", "pipe"],
       });
 
       let stdout = "";
@@ -269,7 +272,7 @@ export class ClaudeRunner {
       const proc = spawn("claude", args, {
         cwd,
         env: this.sanitizeEnv(),
-        stdio: ["pipe", "pipe", "pipe"],
+        stdio: ["ignore", "pipe", "pipe"],
       });
 
       if (trackingId) {

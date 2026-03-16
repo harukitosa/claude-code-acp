@@ -107,7 +107,7 @@ See [docs/configuration.md](docs/configuration.md) for details.
 1. An ACP client spawns `claude-code-acp` as a subprocess
 2. The client sends `initialize`, then `session/new` to create a session
 3. For each user message, the client sends `session/prompt`
-4. Internally, the bridge runs `claude -p --output-format stream-json` and streams results back as `session/update` notifications
+4. Internally, the bridge runs `claude -p --output-format stream-json --verbose` and streams results back as `session/update` notifications
 5. Session continuity is maintained by mapping ACP session IDs to Claude Code session UUIDs via `--resume`
 
 See [docs/architecture.md](docs/architecture.md) for a deeper look.
@@ -127,6 +127,31 @@ See [docs/architecture.md](docs/architecture.md) for a deeper look.
 | `session/load` | Not yet |
 | `session/list` | Not yet |
 | Image / audio prompts | Not yet |
+
+## Use with acpx / OpenClaw
+
+You can use this bridge as a custom agent target for [acpx](https://www.npmjs.com/package/acpx), which enables integration with [OpenClaw](https://github.com/openclaw/openclaw) and other ACP orchestrators.
+
+Add to `~/.acpx/config.json`:
+
+```json
+{
+  "agents": {
+    "claude": {
+      "command": "node /path/to/claude-code-acp/dist/index.js"
+    }
+  }
+}
+```
+
+Then use it via acpx:
+
+```sh
+acpx claude exec "summarize this repo"
+acpx claude "fix the failing tests"
+```
+
+For OpenClaw gateway integration, enable the acpx plugin and set `acp.defaultAgent` to `claude`. See [docs/openclaw.md](docs/openclaw.md) for the full setup guide.
 
 ## Development
 
