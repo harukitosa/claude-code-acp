@@ -21,6 +21,6 @@ export function loadConfig(): AgentConfig {
       ? parseInt(process.env.CLAUDE_ACP_TIMEOUT, 10)
       : 300000, // 5 minutes default
     dangerouslySkipPermissions:
-      process.env.CLAUDE_ACP_SKIP_PERMISSIONS !== "false",
+      process.env.CLAUDE_ACP_SKIP_PERMISSIONS === "true",
   };
 }
