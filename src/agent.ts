@@ -173,12 +173,27 @@ export function createClaudeCodeAgent(
       try {
         let result;
         if (claudeSessionId) {
-          result = await runner.continueSessionStreaming(
-            claudeSessionId,
-            text,
-            onEvent,
-            sessionId
-          );
+          try {
+            result = await runner.continueSessionStreaming(
+              claudeSessionId,
+              text,
+              onEvent,
+              sessionId
+            );
+          } catch (resumeErr) {
+            // Resume failed (expired session, etc.) — fall back to new session
+            logger.warn(
+              `Resume failed for ${claudeSessionId}, starting fresh: ${resumeErr instanceof Error ? resumeErr.message : String(resumeErr)}`
+            );
+            store.clearPersistedSession(cwd);
+            result = await runner.startSessionStreaming(
+              cwd,
+              text,
+              onEvent,
+              sessionId
+            );
+            store.setClaudeSessionId(sessionId, result.sessionId);
+          }
         } else {
           const mcpServers = store.getMcpServers(sessionId);
           if (mcpServers.length > 0) {
