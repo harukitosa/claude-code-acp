@@ -3,6 +3,14 @@ import { createClaudeCodeAgent } from "../src/agent.js";
 import type { AgentSideConnection } from "@agentclientprotocol/sdk";
 import type { StreamEvent } from "../src/claude-runner.js";
 
+// Mock node:fs so SessionStore doesn't read real persisted sessions
+vi.mock("node:fs", () => ({
+  existsSync: vi.fn(() => false),
+  readFileSync: vi.fn(() => "{}"),
+  writeFileSync: vi.fn(),
+  mkdirSync: vi.fn(),
+}));
+
 vi.mock("../src/validation.js", () => ({
   validateCwd: vi.fn((cwd: string) => cwd),
   validateMcpCommand: vi.fn(),

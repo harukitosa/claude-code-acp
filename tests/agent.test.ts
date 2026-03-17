@@ -2,6 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createClaudeCodeAgent } from "../src/agent.js";
 import type { AgentSideConnection } from "@agentclientprotocol/sdk";
 
+// Mock node:fs so SessionStore doesn't read real persisted sessions
+vi.mock("node:fs", () => ({
+  existsSync: vi.fn(() => false),
+  readFileSync: vi.fn(() => "{}"),
+  writeFileSync: vi.fn(),
+  mkdirSync: vi.fn(),
+}));
+
 // Mock validation - agent unit tests should not hit filesystem
 vi.mock("../src/validation.js", () => ({
   validateCwd: vi.fn((cwd: string) => cwd),
@@ -20,14 +28,18 @@ vi.mock("../src/claude-runner.js", () => {
       text: "Continued response",
       sessionId: "claude-uuid-abc",
     });
-    this.startSessionStreaming = vi.fn().mockResolvedValue({
-      text: "Streamed response",
-      sessionId: "claude-uuid-abc",
-    });
-    this.continueSessionStreaming = vi.fn().mockResolvedValue({
-      text: "Continued streamed",
-      sessionId: "claude-uuid-abc",
-    });
+    this.startSessionStreaming = vi.fn().mockImplementation(
+      async (_cwd: string, _prompt: string, onEvent: (e: any) => void) => {
+        onEvent({ type: "text_delta", text: "Streamed response" });
+        return { text: "Streamed response", sessionId: "claude-uuid-abc" };
+      }
+    );
+    this.continueSessionStreaming = vi.fn().mockImplementation(
+      async (_sessionId: string, _prompt: string, onEvent: (e: any) => void) => {
+        onEvent({ type: "text_delta", text: "Continued streamed" });
+        return { text: "Continued streamed", sessionId: "claude-uuid-abc" };
+      }
+    );
     this.cancel = vi.fn();
   });
   return { ClaudeRunner: MockClaudeRunner };

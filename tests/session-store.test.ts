@@ -1,5 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { SessionStore } from "../src/session-store.js";
+
+// Mock node:fs so tests don't read/write the real persisted sessions file
+vi.mock("node:fs", () => ({
+  existsSync: vi.fn(() => false),
+  readFileSync: vi.fn(() => "{}"),
+  writeFileSync: vi.fn(),
+  mkdirSync: vi.fn(),
+}));
 
 describe("SessionStore", () => {
   let store: SessionStore;
