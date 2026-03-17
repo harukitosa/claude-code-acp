@@ -9,6 +9,7 @@ import { logger } from "./logger.js";
 export { createClaudeCodeAgent } from "./agent.js";
 export { ClaudeRunner } from "./claude-runner.js";
 export { SessionStore } from "./session-store.js";
+export type { SessionInfo } from "./session-store.js";
 export { loadConfig } from "./config.js";
 export type { AgentConfig } from "./config.js";
 export type { ClaudeResult, StreamEvent, McpServerConfig } from "./claude-runner.js";

@@ -7,11 +7,22 @@ import { logger } from "./logger.js";
 const STORE_DIR = join(homedir(), ".claude-code-acp");
 const STORE_FILE = join(STORE_DIR, "sessions.json");
 
+export interface SessionInfo {
+  sessionId: string;
+  cwd: string;
+  title?: string;
+  updatedAt?: string;
+}
+
 interface SessionData {
   cwd: string;
   claudeSessionId?: string;
   mcpServers: McpServerConfig[];
   createdAt: string;
+  mode?: string;
+  title?: string;
+  updatedAt: string;
+  configOverrides: Record<string, unknown>;
 }
 
 /** Persisted mapping: cwd → Claude Code session UUID */
@@ -35,11 +46,14 @@ export class SessionStore {
     const persisted = this.loadPersisted();
     const claudeSessionId = persisted[cwd];
 
+    const now = new Date().toISOString();
     this.sessions.set(sessionId, {
       cwd,
       mcpServers,
       claudeSessionId,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
+      configOverrides: {},
     });
 
     if (claudeSessionId) {
@@ -70,6 +84,71 @@ export class SessionStore {
 
   getClaudeSessionId(sessionId: string): string | undefined {
     return this.sessions.get(sessionId)?.claudeSessionId;
+  }
+
+  getMode(sessionId: string): string | undefined {
+    return this.sessions.get(sessionId)?.mode;
+  }
+
+  setMode(sessionId: string, mode: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session ${sessionId} not found`);
+    }
+    session.mode = mode;
+    session.updatedAt = new Date().toISOString();
+  }
+
+  getTitle(sessionId: string): string | undefined {
+    return this.sessions.get(sessionId)?.title;
+  }
+
+  setTitle(sessionId: string, title: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session ${sessionId} not found`);
+    }
+    session.title = title;
+    session.updatedAt = new Date().toISOString();
+  }
+
+  getUpdatedAt(sessionId: string): string | undefined {
+    return this.sessions.get(sessionId)?.updatedAt;
+  }
+
+  touch(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session ${sessionId} not found`);
+    }
+    session.updatedAt = new Date().toISOString();
+  }
+
+  getConfigOverrides(sessionId: string): Record<string, unknown> {
+    return this.sessions.get(sessionId)?.configOverrides ?? {};
+  }
+
+  setConfigOverride(sessionId: string, key: string, value: unknown): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session ${sessionId} not found`);
+    }
+    session.configOverrides[key] = value;
+    session.updatedAt = new Date().toISOString();
+  }
+
+  listAll(cwdFilter?: string): SessionInfo[] {
+    const result: SessionInfo[] = [];
+    for (const [sessionId, data] of this.sessions) {
+      if (cwdFilter && data.cwd !== cwdFilter) continue;
+      result.push({
+        sessionId,
+        cwd: data.cwd,
+        title: data.title,
+        updatedAt: data.updatedAt,
+      });
+    }
+    return result;
   }
 
   delete(sessionId: string): void {

@@ -117,15 +117,21 @@ See [docs/architecture.md](docs/architecture.md) for a deeper look.
 | Feature | Status |
 |---|---|
 | `initialize` | Supported |
-| `session/new` | Supported |
+| `session/new` | Supported (returns modes + configOptions) |
 | `session/prompt` | Supported (streaming) |
-| `session/cancel` | Supported |
+| `session/cancel` | Supported (returns `cancelled` stop reason) |
+| `session/load` | Supported |
+| `session/list` | Supported (with cwd filter + pagination) |
+| `session/set_mode` | Supported (code / ask / architect) |
+| `session/set_config_option` | Supported (thought_level) |
 | `authenticate` | No-op (auth is via Claude Code login) |
 | `session/update` — text chunks | Supported |
 | `session/update` — tool calls | Supported |
+| `session/update` — thought chunks | Supported |
+| `session/update` — session info | Supported |
+| `session/update` — mode / config | Supported |
 | MCP server passthrough | Supported (stdio transport) |
-| `session/load` | Not yet |
-| `session/list` | Not yet |
+| Permission requests | Supported (allow/reject once/always) |
 | Image / audio prompts | Not yet |
 
 ## Use with acpx / OpenClaw
@@ -159,7 +165,7 @@ For OpenClaw gateway integration, enable the acpx plugin and set `acp.defaultAge
 git clone https://github.com/harukitosa/claude-code-acp.git
 cd claude-code-acp
 npm install
-npm test          # Run all tests (57 tests)
+npm test          # Run all tests (122 tests)
 npm run build     # Build to dist/
 npm run test:watch # Watch mode
 ```

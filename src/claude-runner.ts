@@ -21,12 +21,13 @@ export interface ClaudeResult {
 }
 
 export interface StreamEvent {
-  type: "text_delta" | "tool_use" | "result" | "permission_request";
+  type: "text_delta" | "tool_use" | "result" | "permission_request" | "thinking";
   text?: string;
   toolName?: string;
   toolInput?: unknown;
   sessionId?: string;
   permissionId?: string;
+  usage?: { input_tokens?: number; output_tokens?: number };
 }
 
 const SENSITIVE_FLAGS = new Set(["-p", "--print"]);
@@ -365,6 +366,8 @@ export class ClaudeRunner {
             toolName: block.name,
             toolInput: block.input,
           });
+        } else if (block.type === "thinking") {
+          onEvent({ type: "thinking", text: block.thinking });
         }
       }
       return;
@@ -381,12 +384,22 @@ export class ClaudeRunner {
       return;
     }
 
+    // Handle thinking/extended thinking blocks
+    if (
+      parsed.type === "content_block_delta" &&
+      parsed.delta?.type === "thinking_delta"
+    ) {
+      onEvent({ type: "thinking", text: parsed.delta.thinking });
+      return;
+    }
+
     // Handle result event
     if (parsed.type === "result") {
       onEvent({
         type: "result",
         text: parsed.result,
         sessionId: parsed.session_id,
+        usage: parsed.usage,
       });
     }
   }
