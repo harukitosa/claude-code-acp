@@ -112,6 +112,7 @@ export function createClaudeCodeAgent(
     async newSession(
       params: NewSessionRequest
     ): Promise<NewSessionResponse> {
+      logger.debug(`newSession params: ${JSON.stringify(params)}`);
       // Validate cwd
       let resolvedCwd: string;
       try {
@@ -246,6 +247,7 @@ export function createClaudeCodeAgent(
     },
 
     async prompt(params: PromptRequest): Promise<PromptResponse> {
+      logger.debug(`prompt params keys: ${JSON.stringify(Object.keys(params))}`);
       const { sessionId, prompt } = params;
 
       if (!store.has(sessionId)) {

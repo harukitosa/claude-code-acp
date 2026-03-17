@@ -25,9 +25,22 @@ interface SessionData {
   configOverrides: Record<string, unknown>;
 }
 
-/** Persisted mapping: cwd → Claude Code session UUID */
+/** Persisted mapping: persistKey → Claude Code session UUID */
 interface PersistedSessions {
-  [cwd: string]: string; // cwd → claudeSessionId
+  [key: string]: string;
+}
+
+/**
+ * Returns a stable key for persisting sessions.
+ * Uses ACPX_SESSION_NAME (unique per thread/spawn) when available,
+ * falls back to cwd (shared across threads with same directory).
+ */
+function getPersistKey(cwd: string): string {
+  const sessionName = process.env.ACPX_SESSION_NAME;
+  if (sessionName) {
+    return `session:${sessionName}`;
+  }
+  return `cwd:${cwd}`;
 }
 
 export class SessionStore {
@@ -43,8 +56,9 @@ export class SessionStore {
     }
 
     // Restore Claude Code session ID from disk if available
+    const persistKey = getPersistKey(cwd);
     const persisted = this.loadPersisted();
-    const claudeSessionId = persisted[cwd];
+    const claudeSessionId = persisted[persistKey];
 
     const now = new Date().toISOString();
     this.sessions.set(sessionId, {
@@ -58,7 +72,7 @@ export class SessionStore {
 
     if (claudeSessionId) {
       logger.info(
-        `Restored Claude Code session ${claudeSessionId} for cwd ${cwd}`
+        `Restored Claude Code session ${claudeSessionId} for ${persistKey}`
       );
     }
   }
@@ -78,8 +92,9 @@ export class SessionStore {
     }
     session.claudeSessionId = claudeId;
 
-    // Persist to disk
-    this.savePersisted(session.cwd, claudeId);
+    // Persist to disk using stable key
+    const persistKey = getPersistKey(session.cwd);
+    this.savePersisted(persistKey, claudeId);
   }
 
   getClaudeSessionId(sessionId: string): string | undefined {
@@ -159,12 +174,13 @@ export class SessionStore {
     return this.sessions.has(sessionId);
   }
 
-  /** Clear the persisted Claude Code session for a given cwd. */
+  /** Clear the persisted Claude Code session for the current persist key. */
   clearPersistedSession(cwd: string): void {
+    const persistKey = getPersistKey(cwd);
     const persisted = this.loadPersisted();
-    delete persisted[cwd];
+    delete persisted[persistKey];
     this.writePersisted(persisted);
-    logger.info(`Cleared persisted session for cwd ${cwd}`);
+    logger.info(`Cleared persisted session for ${persistKey}`);
   }
 
   private loadPersisted(): PersistedSessions {
@@ -179,12 +195,12 @@ export class SessionStore {
     return {};
   }
 
-  private savePersisted(cwd: string, claudeSessionId: string): void {
+  private savePersisted(key: string, claudeSessionId: string): void {
     const persisted = this.loadPersisted();
-    persisted[cwd] = claudeSessionId;
+    persisted[key] = claudeSessionId;
     this.writePersisted(persisted);
     logger.debug(
-      `Persisted Claude Code session ${claudeSessionId} for cwd ${cwd}`
+      `Persisted Claude Code session ${claudeSessionId} for ${key}`
     );
   }
 
