@@ -21,11 +21,12 @@ export interface ClaudeResult {
 }
 
 export interface StreamEvent {
-  type: "text_delta" | "tool_use" | "result";
+  type: "text_delta" | "tool_use" | "result" | "permission_request";
   text?: string;
   toolName?: string;
   toolInput?: unknown;
   sessionId?: string;
+  permissionId?: string;
 }
 
 const SENSITIVE_FLAGS = new Set(["-p", "--print"]);
@@ -366,6 +367,17 @@ export class ClaudeRunner {
           });
         }
       }
+      return;
+    }
+
+    // Handle permission request from Claude CLI
+    if (parsed.type === "permission_request") {
+      onEvent({
+        type: "permission_request",
+        toolName: parsed.tool_name ?? parsed.toolName,
+        toolInput: parsed.tool_input ?? parsed.toolInput,
+        permissionId: parsed.permission_id ?? parsed.permissionId,
+      });
       return;
     }
 

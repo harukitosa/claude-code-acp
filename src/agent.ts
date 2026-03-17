@@ -144,6 +144,8 @@ export function createClaudeCodeAgent(
         `Prompt content: ${text.slice(0, 100)}${text.length > 100 ? "..." : ""}`
       );
 
+      const permissionPromises: Promise<void>[] = [];
+
       const onEvent = (event: StreamEvent) => {
         if (event.type === "text_delta" && event.text) {
           connection.sessionUpdate({
@@ -167,6 +169,80 @@ export function createClaudeCodeAgent(
               rawInput: event.toolInput ?? {},
             },
           });
+        } else if (event.type === "permission_request" && event.toolName) {
+          const toolCallId = `call_${++toolCallCounter}`;
+          const toolName = event.toolName;
+          const toolInput = event.toolInput ?? {};
+          logger.info(`Permission request: ${toolName}`);
+
+          // Send pending tool_call status
+          connection.sessionUpdate({
+            sessionId,
+            update: {
+              sessionUpdate: "tool_call",
+              toolCallId,
+              title: toolName,
+              kind: "execute",
+              status: "pending",
+              rawInput: toolInput,
+            },
+          });
+
+          // Request permission from client (track promise for awaiting)
+          const permPromise = connection
+            .requestPermission({
+              sessionId,
+              toolCall: {
+                toolCallId,
+                title: toolName,
+                kind: "execute",
+                status: "pending",
+                rawInput: toolInput,
+              },
+              options: [
+                { optionId: "allow_once", kind: "allow_once", label: "Allow once" },
+                { optionId: "allow_always", kind: "allow_always", label: "Allow always" },
+                { optionId: "reject_once", kind: "reject_once", label: "Reject once" },
+                { optionId: "reject_always", kind: "reject_always", label: "Reject always" },
+              ],
+            })
+            .then((response) => {
+              const outcome = response.outcome;
+              const isApproved =
+                outcome.type === "selected" &&
+                (outcome.optionId === "allow_once" ||
+                  outcome.optionId === "allow_always");
+
+              connection.sessionUpdate({
+                sessionId,
+                update: {
+                  sessionUpdate: "tool_call",
+                  toolCallId,
+                  title: toolName,
+                  kind: "execute",
+                  status: isApproved ? "completed" : "failed",
+                  rawInput: toolInput,
+                },
+              });
+            })
+            .catch((err) => {
+              logger.error(
+                `Permission request failed: ${err instanceof Error ? err.message : String(err)}`
+              );
+              connection.sessionUpdate({
+                sessionId,
+                update: {
+                  sessionUpdate: "tool_call",
+                  toolCallId,
+                  title: toolName,
+                  kind: "execute",
+                  status: "failed",
+                  rawInput: toolInput,
+                },
+              });
+            });
+
+          permissionPromises.push(permPromise);
         }
       };
 
@@ -214,6 +290,9 @@ export function createClaudeCodeAgent(
           }
           store.setClaudeSessionId(sessionId, result.sessionId);
         }
+
+        // Wait for all pending permission requests to resolve
+        await Promise.all(permissionPromises);
 
         logger.info(`Prompt completed for session ${sessionId}`);
         return { stopReason: "end_turn" };
